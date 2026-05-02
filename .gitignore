@@ -1,0 +1,12 @@
+.gradle/
+build/
+run/
+!run/server.properties
+out/
+.idea/
+*.iml
+*.iws
+.vscode/
+bin/
+logs/
+crash-reports/

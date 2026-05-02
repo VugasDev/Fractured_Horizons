@@ -1,0 +1,8 @@
+{
+  "replace": false,
+  "values": [
+    "fractured_horizons:shattered_lands",
+    "fractured_horizons:mainland_only",
+    "fractured_horizons:skybound_only"
+  ]
+}

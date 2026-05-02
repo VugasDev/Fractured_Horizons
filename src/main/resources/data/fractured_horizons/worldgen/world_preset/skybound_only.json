@@ -1,0 +1,43 @@
+{
+  "dimensions": {
+    "minecraft:overworld": {
+      "type": "fractured_horizons:shattered_type",
+      "generator": {
+        "type": "fractured_horizons:fractured_generator",
+        "biome_source": {
+          "type": "fractured_horizons:fractured_biome_source",
+          "wrapped": {
+            "preset": "minecraft:overworld"
+          }
+        },
+        "settings": "minecraft:overworld",
+        "fractured_settings": {
+          "is_shattered": false,
+          "is_skybound_only": true,
+          "is_mainland_only": false
+        }
+      }
+    },
+    "minecraft:the_nether": {
+      "type": "minecraft:the_nether",
+      "generator": {
+        "type": "minecraft:noise",
+        "biome_source": {
+          "type": "minecraft:multi_noise",
+          "preset": "minecraft:nether"
+        },
+        "settings": "minecraft:nether"
+      }
+    },
+    "minecraft:the_end": {
+      "type": "minecraft:the_end",
+      "generator": {
+        "type": "minecraft:noise",
+        "biome_source": {
+          "type": "minecraft:the_end"
+        },
+        "settings": "minecraft:end"
+      }
+    }
+  }
+}
