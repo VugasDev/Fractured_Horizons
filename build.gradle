@@ -46,6 +46,8 @@ neoForge {
 
         data {
             data()
+            // Eigenes Verzeichnis ohne run/mods/ — verhindert Client-Only-Mod-Crashes (z.B. MouseTweaks) im headless Datagen-Kontext
+            gameDirectory = project.file('run-data')
             programArguments.addAll '--mod', project.mod_id, '--all', '--output', file('src/generated/resources/').getAbsolutePath(), '--existing', file('src/main/resources/').getAbsolutePath()
         }
     }

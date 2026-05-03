@@ -1,23 +1,19 @@
 package com.fracturedhorizons.terrain;
 
-import com.fracturedhorizons.config.FracturedConfig;
-
 public class RadialZoneCalculator {
 
-    public ZoneSample sample(int blockX, int blockZ) {
+    public ZoneSample sample(int blockX, int blockZ, double mainlandRadius, double outerRimStart) {
         double dist = Math.sqrt((double) blockX * blockX + (double) blockZ * blockZ);
-
-        double mainlandRadius = FracturedConfig.MAINLAND_RADIUS.get();
-        double outerRimStart = FracturedConfig.OUTER_RIM_START.get();
 
         if (dist <= mainlandRadius) {
             // t = distance ratio within mainland (0 at center, 1 at edge)
-            double t = dist / mainlandRadius;
+            double t = mainlandRadius > 0 ? dist / mainlandRadius : 1.0;
             return new ZoneSample(Zone.MAINLAND, dist, t, t);
         }
         if (dist < outerRimStart) {
             // Buffer strip: empty void between mainland and outer rim
-            double t = (dist - mainlandRadius) / (outerRimStart - mainlandRadius);
+            double denom = outerRimStart - mainlandRadius;
+            double t = denom > 0 ? (dist - mainlandRadius) / denom : 1.0;
             return new ZoneSample(Zone.BUFFER, dist, t, t);
         }
         // Outer rim

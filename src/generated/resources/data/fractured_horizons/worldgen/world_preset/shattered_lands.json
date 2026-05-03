@@ -1,0 +1,15 @@
+{
+  "dimensions": {
+    "minecraft:overworld": {
+      "type": "fractured_horizons:apex_type",
+      "generator": {
+        "type": "minecraft:noise",
+        "biome_source": {
+          "type": "minecraft:multi_noise",
+          "preset": "minecraft:overworld"
+        },
+        "settings": "fractured_horizons:shattered_lands_settings"
+      }
+    }
+  }
+}

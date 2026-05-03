@@ -34,16 +34,23 @@ public class FracturedDensityFunction implements DensityFunction {
     public DensityFunction input() { return input; }
     public FracturedGeneratorSettings settings() { return settings; }
 
+    private static boolean hasLogged = false;
+
     @Override
     public double compute(FunctionContext context) {
+        if (!hasLogged) {
+            com.fracturedhorizons.FracturedHorizonsMod.LOGGER.info("[DIAGNOSE] DENSITY FUNCTION IST AKTIV! (wurde ausgewertet)");
+            hasLogged = true;
+        }
         int x = context.blockX();
         int y = context.blockY();
         int z = context.blockZ();
 
-        if (settings.isMainlandOnly()) return input.compute(context);
+        // In Mainland Only mode, we still want to compute the mainland shaping, but skip the other zones (handled below)
+        // if (settings.isMainlandOnly()) return input.compute(context); 
         if (settings.isSkyboundOnly()) return -1.0;
 
-        ZoneSample sample = calculator.sample(x, z);
+        ZoneSample sample = calculator.sample(x, z, settings.mainlandRadius(), settings.outerRimStart());
 
         // BUFFER + OUTER RIM: pure air
         if (sample.zone() != Zone.MAINLAND) return -1.0;

@@ -1,14 +1,17 @@
 {
   "required": true,
-  "minVersion": "0.8.5",
+  "minVersion": "0.8",
   "package": "com.fracturedhorizons.mixin",
   "compatibilityLevel": "JAVA_21",
   "refmap": "fractured_horizons.refmap.json",
   "mixins": [
-    "OverworldStemMixin"
+    "DedicatedServerMixin",
+    "NoiseBasedChunkGeneratorAccessor",
+    "WorldDimensionsMixin"
   ],
-  "client": [],
-  "server": [],
+  "client": [
+    "IntegratedServerMixin"
+  ],
   "injectors": {
     "defaultRequire": 1
   }

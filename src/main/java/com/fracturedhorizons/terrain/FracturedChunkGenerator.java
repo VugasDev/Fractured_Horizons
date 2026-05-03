@@ -16,7 +16,7 @@ import net.minecraft.world.level.levelgen.*;
 import net.minecraft.world.level.levelgen.synth.ImprovedNoise;
 import net.minecraft.world.level.StructureManager;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplateManager;
-import com.fracturedhorizons.config.FracturedConfig;
+import com.fracturedhorizons.FracturedHorizonsMod;
 
 public class FracturedChunkGenerator extends NoiseBasedChunkGenerator {
 
@@ -45,6 +45,10 @@ public class FracturedChunkGenerator extends NoiseBasedChunkGenerator {
         this.islandHeight   = new ImprovedNoise(new XoroshiroRandomSource(99182736L));
         this.islandShape3D  = new ImprovedNoise(new XoroshiroRandomSource(36925814L));
         this.islandTaper    = new ImprovedNoise(new XoroshiroRandomSource(84517293L));
+        
+        FracturedHorizonsMod.LOGGER.info("[FracturedHorizons] Generator initialized with settings: shattered={}, skybound={}, mainland={}, radius={}, outerStart={}", 
+            fracturedSettings.isShattered(), fracturedSettings.isSkyboundOnly(), fracturedSettings.isMainlandOnly(), 
+            fracturedSettings.mainlandRadius(), fracturedSettings.outerRimStart());
     }
 
     public FracturedGeneratorSettings getFracturedSettings() { return fracturedSettings; }
@@ -60,19 +64,29 @@ public class FracturedChunkGenerator extends NoiseBasedChunkGenerator {
     private boolean shouldSuppressStructures(ChunkPos cp) {
         if (fracturedSettings.isSkyboundOnly()) return true;
         if (fracturedSettings.isMainlandOnly()) return false;
-        return new RadialZoneCalculator().sample(cp.getMiddleBlockX(), cp.getMiddleBlockZ()).zone() != Zone.MAINLAND;
+        return new RadialZoneCalculator().sample(cp.getMiddleBlockX(), cp.getMiddleBlockZ(), fracturedSettings.mainlandRadius(), fracturedSettings.outerRimStart()).zone() != Zone.MAINLAND;
     }
 
     @Override
     public java.util.concurrent.CompletableFuture<ChunkAccess> fillFromNoise(
             net.minecraft.world.level.levelgen.blending.Blender b, RandomState rs,
             StructureManager sm, ChunkAccess c) {
-        return super.fillFromNoise(b, rs, sm, c).thenApply(ch -> { applyZones(ch); return ch; });
+        ChunkPos cp = c.getPos();
+        if (cp.x == 0 && cp.z == 0) {
+            FracturedHorizonsMod.LOGGER.info("[DIAGNOSE] fillFromNoise START für Chunk 0,0");
+        }
+        return super.fillFromNoise(b, rs, sm, c).thenApply(ch -> { 
+            if (cp.x == 0 && cp.z == 0) {
+                FracturedHorizonsMod.LOGGER.info("[DIAGNOSE] fillFromNoise END (applyZones) für Chunk 0,0");
+            }
+            applyZones(ch); 
+            return ch; 
+        });
     }
 
     @Override
     public void buildSurface(net.minecraft.server.level.WorldGenRegion r,
-                              StructureManager sm, RandomState rs, ChunkAccess c) {
+                               StructureManager sm, RandomState rs, ChunkAccess c) {
         super.buildSurface(r, sm, rs, c);
         applyZones(c);
     }
@@ -82,7 +96,6 @@ public class FracturedChunkGenerator extends NoiseBasedChunkGenerator {
     // ================================================================
 
     private void applyZones(ChunkAccess chunk) {
-        if (fracturedSettings.isMainlandOnly()) return;
         RadialZoneCalculator calc = new RadialZoneCalculator();
         ChunkPos cp = chunk.getPos();
         int minY = chunk.getMinBuildHeight();
@@ -100,7 +113,7 @@ public class FracturedChunkGenerator extends NoiseBasedChunkGenerator {
                     continue;
                 }
 
-                ZoneSample sample = calc.sample(wx, wz);
+                ZoneSample sample = calc.sample(wx, wz, fracturedSettings.mainlandRadius(), fracturedSettings.outerRimStart());
                 switch (sample.zone()) {
                     case MAINLAND:
                         shapeMainland(chunk, wx, wz, sample.t(), minY, maxY, air);
@@ -110,7 +123,10 @@ public class FracturedChunkGenerator extends NoiseBasedChunkGenerator {
                         break;
                     case OUTER_RIM:
                         clearColumn(chunk, wx, wz, minY, maxY, air);
-                        generateVoronoiIsland(chunk, wx, wz, minY, maxY);
+                        // Only generate islands if we are in shattered mode, not mainland only mode
+                        if (!fracturedSettings.isMainlandOnly()) {
+                            generateVoronoiIsland(chunk, wx, wz, minY, maxY);
+                        }
                         break;
                 }
             }
@@ -213,11 +229,10 @@ public class FracturedChunkGenerator extends NoiseBasedChunkGenerator {
 
     private void generateVoronoiIsland(ChunkAccess chunk, int wx, int wz,
                                         int minY, int maxY) {
-        int floorY = FracturedConfig.ISLAND_FLOOR_Y.get();
-        int ceilY = FracturedConfig.ISLAND_CEIL_Y.get();
-        double outerRimStart = FracturedConfig.OUTER_RIM_START.get();
-
-        int cellSize = 500; // Large cells = bigger islands, wide spacing
+        int floorY = fracturedSettings.islandFloorY();
+        int ceilY = fracturedSettings.islandCeilY();
+        double outerRimStart = fracturedSettings.outerRimStart();
+        int cellSize = fracturedSettings.islandCellSize();
 
         int gridX = Math.floorDiv(wx, cellSize);
         int gridZ = Math.floorDiv(wz, cellSize);
@@ -261,7 +276,7 @@ public class FracturedChunkGenerator extends NoiseBasedChunkGenerator {
 
         double edgeFactor = 1.0 - (nearest / secondNearest);
 
-        double crackWidth = 0.30; // wide void gaps
+        double crackWidth = fracturedSettings.islandCrackWidth();
         if (edgeFactor < crackWidth) return;
 
         double islandFactor = Math.min((edgeFactor - crackWidth) / (1.0 - crackWidth), 1.0);
@@ -303,7 +318,7 @@ public class FracturedChunkGenerator extends NoiseBasedChunkGenerator {
             double rough = islandShape3D.noise(wx / 50.0, y / 35.0, wz / 50.0) * 0.12;
             density += rough;
 
-            solid[idx] = density > 0.18;
+            solid[idx] = density > fracturedSettings.islandThreshold();
         }
 
         for (int y = rMin; y < rMax; y++) {

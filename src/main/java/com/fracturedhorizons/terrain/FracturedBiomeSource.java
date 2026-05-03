@@ -1,11 +1,10 @@
 package com.fracturedhorizons.terrain;
 
+import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 import net.minecraft.core.QuartPos;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.BiomeSource;
@@ -19,7 +18,9 @@ public class FracturedBiomeSource extends BiomeSource {
 
     public static final MapCodec<FracturedBiomeSource> CODEC = RecordCodecBuilder.mapCodec(instance ->
             instance.group(
-                    MultiNoiseBiomeSource.CODEC.fieldOf("wrapped").forGetter(FracturedBiomeSource::getWrapped)
+                    MultiNoiseBiomeSource.CODEC.fieldOf("wrapped").forGetter(FracturedBiomeSource::getWrapped),
+                    Codec.DOUBLE.optionalFieldOf("mainland_radius", 512.0).forGetter(FracturedBiomeSource::getMainlandRadius),
+                    Codec.DOUBLE.optionalFieldOf("outer_rim_start", 768.0).forGetter(FracturedBiomeSource::getOuterRimStart)
             ).apply(instance, FracturedBiomeSource::new));
 
     // Hardcoded ocean/river -> land biome replacements
@@ -37,13 +38,24 @@ public class FracturedBiomeSource extends BiomeSource {
             Map.entry("frozen_river", "snowy_plains"));
 
     private final MultiNoiseBiomeSource wrapped;
+    private final double mainlandRadius;
+    private final double outerRimStart;
     private final RadialZoneCalculator calculator = new RadialZoneCalculator();
 
-    public FracturedBiomeSource(MultiNoiseBiomeSource wrapped) {
+    public FracturedBiomeSource(MultiNoiseBiomeSource wrapped, double mainlandRadius, double outerRimStart) {
         this.wrapped = wrapped;
+        this.mainlandRadius = mainlandRadius;
+        this.outerRimStart = outerRimStart;
+    }
+    
+    // For backward compatibility or internal use
+    public FracturedBiomeSource(MultiNoiseBiomeSource wrapped) {
+        this(wrapped, 512.0, 768.0);
     }
 
     public MultiNoiseBiomeSource getWrapped() { return wrapped; }
+    public double getMainlandRadius() { return mainlandRadius; }
+    public double getOuterRimStart() { return outerRimStart; }
 
     @Override
     protected MapCodec<? extends BiomeSource> codec() { return CODEC; }
@@ -58,7 +70,7 @@ public class FracturedBiomeSource extends BiomeSource {
         Holder<Biome> original = wrapped.getNoiseBiome(quartX, quartY, quartZ, sampler);
         int blockX = QuartPos.toBlock(quartX);
         int blockZ = QuartPos.toBlock(quartZ);
-        ZoneSample sample = calculator.sample(blockX, blockZ);
+        ZoneSample sample = calculator.sample(blockX, blockZ, mainlandRadius, outerRimStart);
 
         if (sample.zone() == Zone.MAINLAND) return original;
 
